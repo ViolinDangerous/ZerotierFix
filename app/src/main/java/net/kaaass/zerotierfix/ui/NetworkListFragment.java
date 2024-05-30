@@ -38,6 +38,7 @@ import com.zerotier.sdk.NodeStatus;
 import com.zerotier.sdk.Version;
 
 import net.kaaass.zerotierfix.BuildConfig;
+import net.kaaass.zerotierfix.Global;
 import net.kaaass.zerotierfix.R;
 import net.kaaass.zerotierfix.ZerotierFixApplication;
 import net.kaaass.zerotierfix.events.AfterJoinNetworkEvent;
@@ -486,10 +487,8 @@ public class NetworkListFragment extends Fragment {
      * @param networkId 网络号
      */
     private void startService(long networkId) {
-        var intent = new Intent(requireActivity(), ZeroTierOneService.class);
-        intent.putExtra(ZeroTierOneService.ZT1_NETWORK_ID, networkId);
         doBindService();
-        requireActivity().startService(intent);
+        Global.startZt1Service(networkId);
     }
 
     /**
@@ -499,11 +498,7 @@ public class NetworkListFragment extends Fragment {
         if (this.mBoundService != null) {
             this.mBoundService.stopZeroTier();
         }
-        var intent = new Intent(requireActivity(), ZeroTierOneService.class);
-        this.eventBus.post(new StopEvent());
-        if (!requireActivity().stopService(intent)) {
-            Log.e(TAG, "stopService() returned false");
-        }
+        Global.stopZt1Service();
         doUnbindService();
     }
 

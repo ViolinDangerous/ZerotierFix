@@ -1,5 +1,6 @@
 package net.kaaass.zerotierfix;
 
+import android.content.Context;
 import android.util.Log;
 
 import androidx.multidex.MultiDexApplication;
@@ -24,6 +25,12 @@ public class ZerotierFixApplication extends MultiDexApplication {
                 new ZTOpenHelper(this, "ztfixdb", null)
                         .getWritableDatabase()
         ).newSession();
+    }
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        Global.init(this);
     }
 
     public DaoSession getDaoSession() {

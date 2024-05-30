@@ -1,5 +1,6 @@
 package net.kaaass.zerotierfix.service;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -163,6 +164,45 @@ public class ZeroTierOneService extends VpnService implements Runnable, EventLis
             Log.d(ZeroTierOneService.TAG, "IPv4 Multicast Scanner Thread Ended.");
         }
     };
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        if (this.notificationManager == null) {
+            this.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        }
+
+        Notification notification = getNotification(
+                getString(R.string.notification_text_waiting_for_connection),
+                ""
+        );
+        Log.i(TAG, "ZeroTier One Service Created");
+
+        startForeground(1, notification);
+    }
+
+    public Notification getNotification(String newTitle, String newText) {
+        int pendingIntentFlag = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 31) {
+            pendingIntentFlag |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        var pendingIntent =
+                PendingIntent.getActivity(this, 0,
+                        new Intent(this, NetworkListActivity.class)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                        | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        , pendingIntentFlag);
+
+        return new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOngoing(true)
+                .setContentTitle(newTitle)
+                .setContentText(newText)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .build();
+    }
+
     private Thread v6MulticastScanner = new Thread() {
         /* class com.zerotier.one.service.ZeroTierOneService.AnonymousClass2 */
         List<String> subscriptions = new ArrayList<>();
@@ -933,38 +973,11 @@ public class ZeroTierOneService extends VpnService implements Runnable, EventLis
         this.tunTapAdapter.setFileStreams(this.in, this.out);
         this.tunTapAdapter.startThreads();
 
-        // 状态栏提示
-        if (this.notificationManager == null) {
-            this.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        }
-        if (Build.VERSION.SDK_INT >= 26) {
-            String channelName = getString(R.string.channel_name);
-            String description = getString(R.string.channel_description);
-            var channel = new NotificationChannel(
-                    Constants.CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription(description);
-            this.notificationManager.createNotificationChannel(channel);
-        }
-        int pendingIntentFlag = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= 31) {
-            pendingIntentFlag |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        var pendingIntent =
-                PendingIntent.getActivity(this, 0,
-                        new Intent(this, NetworkListActivity.class)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                        | Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        , pendingIntentFlag);
-        var notification = new NotificationCompat.Builder(this, Constants.CHANNEL_ID)
-                .setPriority(1)
-                .setOngoing(true)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(getString(R.string.notification_title_connected))
-                .setContentText(getString(R.string.notification_text_connected, network.getNetworkIdStr()))
-                .setColor(ContextCompat.getColor(getApplicationContext(), R.color.zerotier_orange))
-                .setContentIntent(pendingIntent).build();
-        this.notificationManager.notify(ZT_NOTIFICATION_TAG, notification);
-        Log.i(TAG, "ZeroTier One Connected");
+        Notification notification = getNotification(
+                getString(R.string.notification_title_connected),
+                getString(R.string.notification_text_connected, network.getNetworkIdStr())
+        );
+        notificationManager.notify(1, notification);
 
         // 旧版本 Android 多播处理
         if (Build.VERSION.SDK_INT < 29) {
